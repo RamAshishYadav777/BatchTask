@@ -59,7 +59,7 @@ export const useProducts = () => {
             setProducts(productsList);
         } catch (error) {
             console.error('FETCH ERROR:', error);
-            showNotification('error', 'Error fetching fleet records');
+            showNotification('error', 'Error fetching products');
         } finally {
             setLoading(false);
         }
