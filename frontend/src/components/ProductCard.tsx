@@ -6,9 +6,10 @@ interface ProductCardProps {
     onEdit: (p: Product) => void;
     onDelete: (id: string) => void;
     onView: (p: Product) => void;
+    onRestore?: (id: string) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onView }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, onView, onRestore }) => {
     return (
         <div className="bg-slate-800/40 border border-slate-700/50 backdrop-blur-md overflow-hidden flex flex-col h-full shadow-2xl hover:shadow-[0_0_30px_rgba(0,210,211,0.1)] transition-all duration-300 rounded-2xl group">
             <div className="h-80 overflow-hidden bg-slate-900 relative">
@@ -89,6 +90,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete, on
                             >
                                 🗑
                             </button>
+                            {onRestore && (
+                                <button
+                                    onClick={() => onRestore(product._id)}
+                                    className="bg-green-500/10 hover:bg-green-600 text-green-500 hover:text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 border border-green-500/20 hover:border-green-600 shadow-lg"
+                                    title="Restore"
+                                >
+                                    🔄
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

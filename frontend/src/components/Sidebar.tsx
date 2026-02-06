@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, setFilters, availableCategor
     const colors = ['white', 'purple', 'blue', 'black', 'red', 'green', 'yellow', 'grey'];
     const defaultCategories = ['clothes', 'electronics', 'sports', 'vehicle', 'food'];
 
-    // Deduplicate and normalize categories (case-insensitive and trimmed)
+   
     const normalizedAvailable = availableCategories.map(c => c.toLowerCase().trim());
     const combined = Array.from(new Set([...defaultCategories, ...normalizedAvailable]))
         .filter(c => !['clothing', 'clothings', 'standard'].includes(c));

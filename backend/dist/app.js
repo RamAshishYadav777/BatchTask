@@ -15,8 +15,8 @@ const app = (0, express_1.default)();
 // SECURITY & MIDDLEWARE
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : 'http://localhost:5173',
-    credentials: true
+    origin: true,
+    credentials: true,
 }));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));

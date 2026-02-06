@@ -25,6 +25,7 @@ export interface FilterState {
     category: string[];
     minPrice: number;
     maxPrice: number;
+    isTrash?: boolean;
 }
 
 export const useProducts = () => {
@@ -37,7 +38,8 @@ export const useProducts = () => {
         color: [],
         category: [],
         minPrice: 0,
-        maxPrice: 700000
+        maxPrice: 700000,
+        isTrash: false
     });
 
     const fetchProducts = useCallback(async () => {
@@ -52,7 +54,8 @@ export const useProducts = () => {
             if (filters.maxPrice < 700000) params.maxPrice = filters.maxPrice;
 
 
-            const response = await api.get('/products', { params });
+            const endpoint = filters.isTrash ? '/products/trash' : '/products';
+            const response = await api.get(endpoint, { params });
 
 
             const productsList = response.data.data || [];
@@ -113,12 +116,22 @@ export const useProducts = () => {
 
         if (result.isConfirmed) {
             try {
-                await api.delete(`/products/${id}`);
-                showNotification('success', 'Asset retired successfully');
+                await api.patch(`/products/${id}/delete`);
+                showNotification('success', 'Asset moved to trash');
                 fetchProducts();
             } catch (error) {
-                showNotification('error', 'Failed to retire asset');
+                showNotification('error', 'Failed to move asset to trash');
             }
+        }
+    };
+
+    const restoreProduct = async (id: string) => {
+        try {
+            await api.patch(`/products/${id}/restore`);
+            showNotification('success', 'Asset restored successfully');
+            fetchProducts();
+        } catch (error) {
+            showNotification('error', 'Failed to restore asset');
         }
     };
 
@@ -129,6 +142,7 @@ export const useProducts = () => {
         filters,
         setFilters,
         handleFormSubmit,
-        deleteProduct
+        deleteProduct,
+        restoreProduct
     };
 };
