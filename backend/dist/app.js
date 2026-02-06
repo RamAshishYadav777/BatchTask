@@ -27,6 +27,9 @@ app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
     process.exit(1);
 });
 // ROUTES
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', message: 'Backend service is healthy' });
+});
 app.use('/api/v1', productApiRoutes_1.default);
 // GLOBAL ERROR HANDLER
 app.use((err, req, res, next) => {

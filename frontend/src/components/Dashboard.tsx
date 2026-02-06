@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
                                 <div className="text-center py-40 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/50">
                                     <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Target Asset Not Found</p>
                                     <button
-                                        onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 700000 })}
+                                        onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 700000, isTrash: filters.isTrash })}
                                         className="mt-4 text-[#00d2d3] font-bold text-xs underline uppercase tracking-tighter hover:text-white transition-colors"
                                     >
                                         CLEAR FIELD ANALYTICS

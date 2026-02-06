@@ -104,23 +104,32 @@ export const useProducts = () => {
     };
 
     const deleteProduct = async (id: string) => {
+        const isInTrash = filters.isTrash;
+
         const result = await Swal.fire({
-            title: "Retire Asset?",
-            text: "This will permanently remove this record.",
+            title: isInTrash ? "Delete Permanently?" : "Retire Asset?",
+            text: isInTrash
+                ? "This action cannot be undone. This record will be gone forever."
+                : "This will move the record to trash.",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#008b8b",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "YES, RETIRE"
+            confirmButtonColor: isInTrash ? "#d33" : "#008b8b",
+            cancelButtonColor: "#64748b",
+            confirmButtonText: isInTrash ? "YES, DELETE FOREVER" : "YES, RETIRE"
         });
 
         if (result.isConfirmed) {
             try {
-                await api.patch(`/products/${id}/delete`);
-                showNotification('success', 'Asset moved to trash');
+                if (isInTrash) {
+                    await api.delete(`/products/${id}`);
+                    showNotification('success', 'Asset permanently deleted');
+                } else {
+                    await api.patch(`/products/${id}/delete`);
+                    showNotification('success', 'Asset moved to trash');
+                }
                 fetchProducts();
             } catch (error) {
-                showNotification('error', 'Failed to move asset to trash');
+                showNotification('error', `Failed to ${isInTrash ? 'permanently delete' : 'move'} asset`);
             }
         }
     };

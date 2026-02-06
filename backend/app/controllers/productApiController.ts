@@ -118,41 +118,85 @@ class ProductApiController {
   //SOFT DELETE
   async softDeleteProduct(req: Request, res: Response): Promise<Response> {
     try {
-      await Product.findOneAndUpdate(
-        { _id: req.params.id },
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
         {
           isDeleted: true,
           deletedAt: new Date(),
         },
+        { new: true }
       );
 
+      if (!product) {
+        return res.status(404).json({ success: false, message: "Product not found" });
+      }
+
       return res.json({ success: true, message: "Moved to trash" });
-    } catch {
-      return res.status(500).json({ success: false });
+    } catch (err: any) {
+      console.error("SOFT DELETE ERROR:", err);
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 
   //TRASH
   async getTrashProducts(req: Request, res: Response): Promise<Response> {
     try {
-      const products = await Product.find({ isDeleted: true });
+      const { search, size, color, minPrice, maxPrice } = req.query;
+      const query: any = { isDeleted: true };
+
+      if (search) {
+        query.name = { $regex: String(search), $options: "i" };
+      }
+
+      if (size) {
+        const sizes = String(size).split(",").filter(Boolean);
+        if (sizes.length > 0) query.size = { $in: sizes };
+      }
+
+      if (color) {
+        const colors = String(color).split(",").filter(Boolean);
+        if (colors.length > 0) query.color = { $in: colors };
+      }
+
+      if (req.query.category) {
+        const categories = String(req.query.category).split(",").filter(Boolean);
+        if (categories.length > 0) query.category = { $in: categories };
+      }
+
+      if (minPrice || maxPrice) {
+        query.price = {};
+        if (minPrice) query.price.$gte = Number(minPrice);
+        if (maxPrice) query.price.$lte = Number(maxPrice);
+      }
+
+      const products = await Product.find(query).sort({ deletedAt: -1 });
       return res.json({ success: true, data: products });
-    } catch {
-      return res.status(500).json({ success: false });
+    } catch (err: any) {
+      console.error("TRASH FETCH ERROR:", err);
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 
   //RESTORE
   async restoreProduct(req: Request, res: Response): Promise<Response> {
     try {
-      await Product.findByIdAndUpdate(req.params.id, {
-        isDeleted: false,
-        deletedAt: null,
-      });
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          isDeleted: false,
+          deletedAt: null,
+        },
+        { new: true }
+      );
+
+      if (!product) {
+        return res.status(404).json({ success: false, message: "Product not found" });
+      }
 
       return res.json({ success: true, message: "Restored successfully" });
-    } catch {
-      return res.status(500).json({ success: false });
+    } catch (err: any) {
+      console.error("RESTORE ERROR:", err);
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 

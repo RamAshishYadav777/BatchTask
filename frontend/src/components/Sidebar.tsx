@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, setFilters, availableCategor
     const colors = ['white', 'purple', 'blue', 'black', 'red', 'green', 'yellow', 'grey'];
     const defaultCategories = ['clothes', 'electronics', 'sports', 'vehicle', 'food'];
 
-   
+
     const normalizedAvailable = availableCategories.map(c => c.toLowerCase().trim());
     const combined = Array.from(new Set([...defaultCategories, ...normalizedAvailable]))
         .filter(c => !['clothing', 'clothings', 'standard'].includes(c));
@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, setFilters, availableCategor
             <div className="flex items-center justify-between">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Search Filters</h2>
                 <button
-                    onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 700000 })}
+                    onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 700000, isTrash: filters.isTrash })}
                     className="text-[10px] font-bold uppercase text-[#00d2d3] hover:text-white transition-colors"
                 >
                     Reset All
