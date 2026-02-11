@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import Swal from "sweetalert2";
-import api from '../api';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '../redux/store';
+import { setFilters as setReduxFilters, FilterState } from '../redux/filterSlice';
+import { showNotification } from '../redux/notificationSlice';
+import {
+    useProductsQuery,
+    useCreateProductMutation,
+    useUpdateProductMutation,
+    useDeleteProductMutation,
+    useRestoreProductMutation
+} from './queries';
 
 export interface Product {
     _id: string;
@@ -13,93 +23,45 @@ export interface Product {
     color: string[];
 }
 
-export interface Notification {
-    type: 'success' | 'error';
-    msg: string;
-}
-
-export interface FilterState {
-    search: string;
-    size: string[];
-    color: string[];
-    category: string[];
-    minPrice: number;
-    maxPrice: number;
-    isTrash?: boolean;
-}
-
 export const useProducts = () => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [notification, setNotification] = useState<Notification | null>(null);
-    const [filters, setFilters] = useState<FilterState>({
-        search: '',
-        size: [],
-        color: [],
-        category: [],
-        minPrice: 0,
-        maxPrice: 700000,
-        isTrash: false
-    });
+    const dispatch = useDispatch();
+    const filters = useSelector((state: RootState) => state.filters);
 
-    const fetchProducts = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params: any = {};
-            if (filters.search.trim().length >= 3) params.search = filters.search;
-            if (filters.size.length > 0) params.size = filters.size.join(',');
-            if (filters.color.length > 0) params.color = filters.color.join(',');
-            if (filters.category.length > 0) params.category = filters.category.join(',');
-            if (filters.minPrice > 0) params.minPrice = filters.minPrice;
-            if (filters.maxPrice < 700000) params.maxPrice = filters.maxPrice;
+    // Queries
+    const { data: products = [], isLoading: loading } = useProductsQuery(filters);
 
+    // Mutations
+    const createMutation = useCreateProductMutation();
+    const updateMutation = useUpdateProductMutation();
+    const deleteMutation = useDeleteProductMutation();
+    const restoreMutation = useRestoreProductMutation();
 
-            const endpoint = filters.isTrash ? '/products/trash' : '/products';
-            const response = await api.get(endpoint, { params });
-
-
-            const productsList = response.data.data || [];
-            setProducts(productsList);
-        } catch (error) {
-            console.error('FETCH ERROR:', error);
-            showNotification('error', 'Error fetching products');
-        } finally {
-            setLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchProducts();
-        }, 400);
-        return () => clearTimeout(timer);
-    }, [fetchProducts]);
-
-    const showNotification = (type: 'success' | 'error', msg: string) => {
-        setNotification({ type, msg });
-        setTimeout(() => setNotification(null), 3000);
+    const notify = (type: 'success' | 'error', msg: string) => {
+        dispatch(showNotification({ type, message: msg }));
     };
 
-    const handleFormSubmit = async (payload: Partial<Product>, editingProduct: Product | null, onSuccess: () => void) => {
-        try {
-            let response;
-            if (editingProduct) {
-                response = await api.put(`/products/${editingProduct._id}`, payload);
-            } else {
-                response = await api.post('/products', payload);
-            }
+    const setFilters = useCallback((update: FilterState | ((prev: FilterState) => FilterState)) => {
+        if (typeof update === 'function') {
+            dispatch(setReduxFilters(update(filters)));
+        } else {
+            dispatch(setReduxFilters(update));
+        }
+    }, [dispatch, filters]);
 
-            if (response.data.success) {
-                showNotification('success', `Product ${editingProduct ? 'updated' : 'added'} successfully`);
-                fetchProducts();
-                onSuccess();
+    const handleFormSubmit = async (payload: Partial<Product> | FormData, editingProduct: Product | null, onSuccess: () => void) => {
+        try {
+            if (editingProduct) {
+                await updateMutation.mutateAsync({ id: editingProduct._id, data: payload });
+                notify('success', 'Product updated successfully');
             } else {
-                showNotification('error', response.data.message || 'Operation failed');
+                await createMutation.mutateAsync(payload);
+                notify('success', 'Product added successfully');
             }
+            onSuccess();
         } catch (error: any) {
             console.error("SUBMIT ERROR", error);
-            const msg = error.response?.data?.message || 'Server connection error';
-            showNotification('error', msg);
+            const msg = error.response?.data?.message || 'Operation failed';
+            notify('error', msg);
         }
     };
 
@@ -120,34 +82,26 @@ export const useProducts = () => {
 
         if (result.isConfirmed) {
             try {
-                if (isInTrash) {
-                    await api.delete(`/products/${id}`);
-                    showNotification('success', 'Asset permanently deleted');
-                } else {
-                    await api.patch(`/products/${id}/delete`);
-                    showNotification('success', 'Asset moved to trash');
-                }
-                fetchProducts();
+                await deleteMutation.mutateAsync({ id, isTrash: !!isInTrash });
+                notify('success', isInTrash ? 'Asset permanently deleted' : 'Asset moved to trash');
             } catch (error) {
-                showNotification('error', `Failed to ${isInTrash ? 'permanently delete' : 'move'} asset`);
+                notify('error', `Failed to ${isInTrash ? 'permanently delete' : 'move'} asset`);
             }
         }
     };
 
     const restoreProduct = async (id: string) => {
         try {
-            await api.patch(`/products/${id}/restore`);
-            showNotification('success', 'Asset restored successfully');
-            fetchProducts();
+            await restoreMutation.mutateAsync(id);
+            notify('success', 'Asset restored successfully');
         } catch (error) {
-            showNotification('error', 'Failed to restore asset');
+            notify('error', 'Failed to restore asset');
         }
     };
 
     return {
         products,
         loading,
-        notification,
         filters,
         setFilters,
         handleFormSubmit,

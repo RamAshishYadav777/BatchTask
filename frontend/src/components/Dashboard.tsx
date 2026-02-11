@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import Notification from './Notification';
 import Navbar from './Navbar';
 import { Trash2, Home } from 'lucide-react';
 import ProductCard from './ProductCard';
+import ProductCardSkeleton from './ProductCardSkeleton';
 import ProductForm from './ProductForm';
 import Sidebar from './Sidebar';
 import ProductDetail from './ProductDetail';
@@ -17,7 +18,6 @@ const Dashboard: React.FC = () => {
     const {
         products,
         loading,
-        notification,
         filters,
         setFilters,
         handleFormSubmit,
@@ -25,50 +25,55 @@ const Dashboard: React.FC = () => {
         restoreProduct
     } = useProducts();
 
-    const onEdit = (p: Product) => {
+    const onEdit = useCallback((p: Product) => {
         setSelectedProduct(p);
         setViewMode('edit');
-    };
+    }, []);
 
-    const onView = (p: Product) => {
+    const onView = useCallback((p: Product) => {
         setSelectedProduct(p);
         setViewMode('detail');
-    };
+    }, []);
 
-    const onSubmit = (payload: Partial<Product>) => {
+    const onSubmit = useCallback((payload: Partial<Product> | FormData) => {
         handleFormSubmit(payload, viewMode === 'edit' ? selectedProduct : null, () => {
             setViewMode('list');
             setSelectedProduct(null);
         });
-    };
+    }, [handleFormSubmit, viewMode, selectedProduct]);
 
-    const resetToHome = () => {
+    const resetToHome = useCallback(() => {
         setViewMode('list');
         setSelectedProduct(null);
-    };
+    }, []);
 
-    const availableCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+    const handleAddClick = useCallback(() => {
+        setSelectedProduct(null);
+        setViewMode('add');
+    }, []);
+
+    const availableCategories = useMemo(() => Array.from(new Set(products.map((p: Product) => p.category).filter(Boolean))) as string[], [products]);
 
     return (
         <div className="min-h-screen bg-[#0f172a] font-sans">
-            <Notification notification={notification} />
+            <Notification />
             <Navbar />
 
-            <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row min-h-screen">
-                {/* Sidebar - Visible on list view */}
+            <div className="max-w-[1440px] mx-auto flex flex-row min-h-screen">
+                {/* Sidebar - Always visible, narrower on mobile */}
                 {viewMode === 'list' && (
                     <Sidebar filters={filters} setFilters={setFilters} availableCategories={availableCategories} />
                 )}
 
-                <main className="flex-1 p-8 bg-[#0f172a]">
+                <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 bg-[#0f172a]">
                     {viewMode === 'list' ? (
-                        <div className="space-y-8">
+                        <div className="space-y-4 sm:space-y-6 md:space-y-8">
                             {/* Toolbar */}
-                            <div className="flex flex-col md:flex-row items-center gap-6 bg-[#1e293b] p-6 border border-slate-800 shadow-xl rounded-xl">
+                            <div className="flex flex-col md:flex-row items-center gap-3 sm:gap-4 md:gap-6 bg-[#1e293b] p-3 sm:p-4 md:p-6 border border-slate-800 shadow-xl rounded-xl">
                                 <div className="w-full md:w-auto">
                                     <button
-                                        onClick={() => setViewMode('add')}
-                                        className="bg-[#00d2d3] hover:bg-[#008b8b] text-white px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all shadow-lg active:scale-95 w-full md:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
+                                        onClick={handleAddClick}
+                                        className="bg-[#00d2d3] hover:bg-[#008b8b] text-white px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all shadow-lg active:scale-95 w-full md:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
                                     >
                                         <span>+</span> ADD ASSET
                                     </button>
@@ -78,15 +83,15 @@ const Dashboard: React.FC = () => {
                                     <div className="relative w-full max-w-xl group">
                                         <input
                                             type="text"
-                                            placeholder="Search products here..."
+                                            placeholder="Search products..."
                                             value={filters.search}
                                             onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                                            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 pl-10 text-slate-100 focus:border-[#00d2d3] focus:ring-1 focus:ring-[#00d2d3] outline-none transition-all placeholder:text-slate-500 group-hover:bg-slate-800/80"
+                                            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-2 sm:p-2.5 md:p-3 pl-8 sm:pl-9 md:pl-10 text-sm sm:text-base text-slate-100 focus:border-[#00d2d3] focus:ring-1 focus:ring-[#00d2d3] outline-none transition-all placeholder:text-slate-500 group-hover:bg-slate-800/80"
                                         />
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#00d2d3] transition-colors">🔍</span>
+                                        <span className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#00d2d3] transition-colors text-sm sm:text-base">🔍</span>
                                         {loading && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="w-4 h-4 border-2 border-[#00d2d3] border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2">
+                                                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-[#00d2d3] border-t-transparent rounded-full animate-spin"></div>
                                             </div>
                                         )}
                                     </div>
@@ -96,21 +101,22 @@ const Dashboard: React.FC = () => {
                                     {filters.isTrash && (
                                         <button
                                             onClick={() => setFilters(prev => ({ ...prev, isTrash: false }))}
-                                            className="px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-400 hover:text-[#00d2d3] hover:border-[#00d2d3]/30 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider active:scale-95"
+                                            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-400 hover:text-[#00d2d3] hover:border-[#00d2d3]/30 transition-all flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-wider active:scale-95"
                                         >
-                                            <Home size={16} />
-                                            <span>Back to Home</span>
+                                            <Home size={14} className="sm:w-4 sm:h-4" />
+                                            <span className="hidden sm:inline">Back to Home</span>
+                                            <span className="sm:hidden">Home</span>
                                         </button>
                                     )}
                                     <button
                                         onClick={() => setFilters(prev => ({ ...prev, isTrash: !prev.isTrash }))}
-                                        className={`p-3 border rounded-lg transition-all active:scale-95 group relative ${filters.isTrash
+                                        className={`p-2 sm:p-2.5 md:p-3 border rounded-lg transition-all active:scale-95 group relative ${filters.isTrash
                                             ? 'bg-red-500/10 border-red-500/50 text-red-500'
                                             : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5'
                                             }`}
                                         title={filters.isTrash ? "View Active Assets" : "View Trash"}
                                     >
-                                        <Trash2 size={20} className={filters.isTrash ? "rotate-0" : "group-hover:rotate-12 transition-transform"} />
+                                        <Trash2 size={18} className="sm:w-5 sm:h-5 group-hover:rotate-12 transition-transform" />
                                         {!filters.isTrash && (
                                             <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1e293b] animate-pulse"></div>
                                         )}
@@ -120,23 +126,24 @@ const Dashboard: React.FC = () => {
 
                             {/* Grid */}
                             {loading && products.length === 0 ? (
-                                <div className="text-center py-40">
-                                    <div className="w-12 h-12 border-4 border-[#008b8b] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Fetching Records...</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                                    {[...Array(6)].map((_, i) => (
+                                        <ProductCardSkeleton key={i} />
+                                    ))}
                                 </div>
                             ) : products.length === 0 ? (
-                                <div className="text-center py-40 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/50">
-                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Target Asset Not Found</p>
+                                <div className="text-center py-20 sm:py-32 md:py-40 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/50">
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-xs sm:text-sm px-4">Target Asset Not Found</p>
                                     <button
-                                        onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 700000, isTrash: filters.isTrash })}
-                                        className="mt-4 text-[#00d2d3] font-bold text-xs underline uppercase tracking-tighter hover:text-white transition-colors"
+                                        onClick={() => setFilters({ search: '', size: [], color: [], category: [], minPrice: 0, maxPrice: 3000000, isTrash: filters.isTrash })}
+                                        className="mt-4 text-[#00d2d3] font-bold text-[10px] sm:text-xs underline uppercase tracking-tighter hover:text-white transition-colors"
                                     >
                                         CLEAR FIELD ANALYTICS
                                     </button>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    {products.map((p) => (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                                    {products.map((p: Product) => (
                                         <ProductCard
                                             key={p._id}
                                             product={p}
@@ -161,22 +168,22 @@ const Dashboard: React.FC = () => {
                 </main>
             </div>
 
-            <footer className="bg-slate-950 border-t border-white/5 py-12 px-10">
-                <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 border-2 border-[#00d2d3] rounded-md rotate-45 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-[#00d2d3] rounded-full"></div>
+            <footer className="bg-slate-950 border-t border-white/5 py-6 sm:py-8 md:py-12 px-4 sm:px-6 md:px-10">
+                <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 md:gap-8">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-[#00d2d3] rounded-md rotate-45 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#00d2d3] rounded-full"></div>
                         </div>
-                        <span className="text-white font-black uppercase tracking-tighter text-lg">Admin <span className="text-[#00d2d3]">Pro</span></span>
+                        <span className="text-white font-black uppercase tracking-tighter text-base sm:text-lg">Admin <span className="text-[#00d2d3]">Pro</span></span>
                     </div>
 
-                    <div className="flex gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                        <span className="hover:text-white cursor-pointer transition-colors">Documentation</span>
+                    <div className="flex gap-4 sm:gap-6 md:gap-8 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                        <span className="hover:text-white cursor-pointer transition-colors">Docs</span>
                         <span className="hover:text-white cursor-pointer transition-colors">Security</span>
                         <span className="hover:text-white cursor-pointer transition-colors">Privacy</span>
                     </div>
 
-                    <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-slate-600">
+                    <p className="text-[9px] sm:text-[10px] font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-slate-600">
                         &copy; 2026 Admin Pro
                     </p>
                 </div>

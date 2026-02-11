@@ -11,14 +11,24 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
         <div className="max-w-5xl mx-auto p-4 animate-in fade-in zoom-in duration-700">
             <div className="bg-[#1e293b] rounded-[2rem] border border-slate-700/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row backdrop-blur-xl">
                 <div className="md:w-1/2 p-8 bg-black/20 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-700/50">
-                    <img
-                        src={product.image || 'https://via.placeholder.com/400'}
-                        alt={product.name}
-                        className="w-full h-auto object-cover rounded shadow-sm"
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=No+Image';
-                        }}
-                    />
+                    {product.image?.endsWith('.mp4') ? (
+                        <video
+                            src={product.image?.startsWith('http') || product.image?.startsWith('data:') ? product.image : `${import.meta.env.VITE_API_BASE_URL}/uploads/${product.image}`}
+                            className="w-full h-auto object-cover rounded shadow-sm"
+                            controls
+                            autoPlay
+                            loop
+                        />
+                    ) : (
+                        <img
+                            src={product.image?.startsWith('http') || product.image?.startsWith('data:') ? product.image : `${import.meta.env.VITE_API_BASE_URL}/uploads/${product.image || 'default.png'}`}
+                            alt={product.name}
+                            className="w-full h-auto object-cover rounded shadow-sm"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=No+Image';
+                            }}
+                        />
+                    )}
                 </div>
                 <div className="md:w-1/2 p-12 space-y-10 text-left bg-transparent">
                     <div className="space-y-4">
@@ -29,7 +39,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                     <div className="grid grid-cols-1 gap-8 text-slate-300">
                         <div className="flex items-center gap-6">
                             <span className="w-28 font-black text-slate-500 uppercase text-[10px] tracking-[0.3em] border-l-2 border-slate-700 pl-4">Valuation</span>
-                            <span className="text-3xl font-black text-white tracking-tight">₹{product.price !== undefined ? product.price.toLocaleString() : 'N/A'}</span>
+                            <span className="text-3xl font-black text-white tracking-tight">₹{product.price !== undefined ? product.price.toLocaleString('en-IN') : 'N/A'}</span>
                         </div>
 
                         <div className="flex items-start gap-6">

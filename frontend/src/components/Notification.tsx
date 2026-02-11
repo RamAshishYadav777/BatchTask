@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertCircle, Terminal, Activity } from 'lucide-react';
-import { Notification as NotificationType } from '../hooks/useProducts';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '../redux/store';
+import { hideNotification } from '../redux/notificationSlice';
 
-interface NotificationProps {
-    notification: NotificationType | null;
-}
+const Notification: React.FC = () => {
+    const dispatch = useDispatch();
+    const { type, message, isOpen } = useSelector((state: RootState) => state.notification);
 
-const Notification: React.FC<NotificationProps> = ({ notification }) => {
-    if (!notification) return null;
+    useEffect(() => {
+        if (isOpen) {
+            const timer = setTimeout(() => {
+                dispatch(hideNotification());
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, dispatch]);
 
-    const isError = notification.type === 'error';
+    if (!isOpen) return null;
+
+    const isError = type === 'error';
 
     return (
         <div className="fixed top-24 right-6 z-[100] group">
@@ -27,7 +37,7 @@ const Notification: React.FC<NotificationProps> = ({ notification }) => {
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">System Message</span>
                     </div>
                     <p className={`text-sm font-bold tracking-tight ${isError ? 'text-red-200' : 'text-slate-100'}`}>
-                        {notification.msg}
+                        {message}
                     </p>
                 </div>
 

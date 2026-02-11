@@ -22,4 +22,3 @@ const DatabaseConnection = async (): Promise<void> => {
 }
 
 export default DatabaseConnection;
-

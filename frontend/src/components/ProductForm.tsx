@@ -1,8 +1,9 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Product } from '../hooks/useProducts';
+import Swal from 'sweetalert2';
 
 interface ProductFormProps {
-    onSubmit: (data: Partial<Product>) => void;
+    onSubmit: (data: Partial<Product> | FormData) => void;
     initialData?: Product | null;
     onCancel: () => void;
 }
@@ -13,10 +14,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, initialData = null,
         price: '',
         desc: '',
         image: '',
-        category: 'clothes',
+        category: '',
         size: [] as string[],
         color: [] as string[]
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -25,16 +29,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, initialData = null,
                 price: initialData.price?.toString() || '0',
                 desc: initialData.desc || '',
                 image: initialData.image || '',
-                category: initialData.category?.toLowerCase() || 'clothes',
+                category: initialData.category?.toLowerCase() || '',
                 size: Array.isArray(initialData.size) ? initialData.size.map(s => s.toLowerCase()) : [],
                 color: Array.isArray(initialData.color) ? initialData.color.map(c => c.toLowerCase()) : []
             });
+            // If the existing image is a URL, we can set it as preview or just rely on formData.image
+            // But if it's a relative path (from upload), we might need to prepend base URL if not already done.
         }
     }, [initialData]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'image' && (e.target as HTMLInputElement).files) {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                processFile(file);
+            }
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleCheckboxToggle = (category: 'size' | 'color', value: string) => {
@@ -47,12 +60,73 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, initialData = null,
         });
     };
 
+    const processFile = (file: File) => {
+        // Accept all image types and MP4
+        if (file.type.startsWith('image/') || file.type === 'video/mp4') {
+            setImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid File Type',
+                text: 'Please upload an image file or MP4 video',
+                confirmButtonColor: '#00d2d3'
+            });
+        }
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            processFile(files[0]);
+        }
+    };
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-        onSubmit({
-            ...formData,
-            price: Number(formData.price) || 0
-        });
+
+        const data = new FormData();
+        data.append('name', formData.name);
+        data.append('price', formData.price);
+        data.append('desc', formData.desc);
+        data.append('category', formData.category);
+
+        // Append arrays
+        formData.size.forEach(s => data.append('size', s));
+        formData.color.forEach(c => data.append('color', c));
+
+        if (imageFile) {
+            data.append('image', imageFile);
+        } else if (formData.image) {
+            // If we have an existing image URL/path and no new file, we can either send it or not.
+            // If we don't send 'image' key, backend won't update it (if we use direct update).
+            // But our backend controller uses req.body.image if req.file is missing.
+            // So we should append it if we want to keep it/update it.
+            data.append('image', formData.image);
+        }
+
+        onSubmit(data);
     };
 
     const sizeOptions = ['s', 'm', 'l', 'xl', 'fixed size'];
@@ -104,6 +178,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, initialData = null,
                         onChange={handleChange}
                         className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white focus:border-[#00d2d3] outline-none cursor-pointer appearance-none"
                     >
+                        <option value="" disabled>Choose Category</option>
                         <option value="clothes">Clothes</option>
                         <option value="electronics">Electronics</option>
                         <option value="sports">Sports</option>
@@ -159,14 +234,94 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, initialData = null,
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Media URI (Image Source URL)</label>
-                    <input
-                        name="image"
-                        value={formData.image}
-                        onChange={handleChange}
-                        className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-slate-300 focus:border-[#00d2d3] outline-none placeholder:text-slate-600"
-                        placeholder="https://cloud.storage/assets/nexus-v1.jpg"
-                    />
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Media Upload (Images, GIFs & MP4)</label>
+
+                    {/* Drag and Drop Zone */}
+                    <div
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        className={`relative w-full border-2 border-dashed rounded-xl p-8 transition-all duration-300 cursor-pointer ${isDragging
+                            ? 'border-[#00d2d3] bg-[#00d2d3]/10 scale-[1.02]'
+                            : 'border-slate-700 bg-slate-800/30 hover:border-[#00d2d3]/50 hover:bg-slate-800/50'
+                            }`}
+                        onClick={() => document.getElementById('fileInput')?.click()}
+                    >
+                        <input
+                            id="fileInput"
+                            type="file"
+                            name="image"
+                            onChange={handleChange}
+                            accept="image/*,image/gif,video/mp4"
+                            className="hidden"
+                        />
+
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                            {/* Upload Icon */}
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-[#00d2d3]/20 scale-110' : 'bg-slate-700/50'
+                                }`}>
+                                <svg className={`w-8 h-8 transition-colors ${isDragging ? 'text-[#00d2d3]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </div>
+
+                            {/* Text */}
+                            <div className="text-center">
+                                <p className={`text-sm font-bold transition-colors ${isDragging ? 'text-[#00d2d3]' : 'text-slate-300'}`}>
+                                    {isDragging ? 'Drop your media here' : 'Drag & drop your media here'}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">or click to upload</p>
+                                <p className="text-[10px] text-slate-600 mt-2 font-semibold">
+                                    Supports: JPG, PNG, GIF, WebP, MP4 (Max 50MB)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Media Preview */}
+                    {(previewUrl || formData.image) && (
+                        <div className="mt-4 relative w-full h-64 rounded-xl overflow-hidden border-2 border-[#00d2d3]/30 shadow-lg group">
+                            {(imageFile?.type === 'video/mp4' || (!imageFile && formData.image?.endsWith('.mp4'))) ? (
+                                <video
+                                    src={previewUrl ? previewUrl : (formData.image?.startsWith('http') || formData.image?.startsWith('data:') ? formData.image : `${import.meta.env.VITE_API_BASE_URL}/uploads/${formData.image}`)}
+                                    className="w-full h-full object-cover"
+                                    controls
+                                    autoPlay
+                                    muted
+                                    loop
+                                />
+                            ) : (
+                                <img
+                                    src={previewUrl ? previewUrl : (formData.image?.startsWith('http') || formData.image?.startsWith('data:') ? formData.image : `${import.meta.env.VITE_API_BASE_URL}/uploads/${formData.image}`)}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=No+Image';
+                                    }}
+                                />
+                            )}
+                            {/* Remove button */}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setImageFile(null);
+                                    setPreviewUrl('');
+                                    setFormData(prev => ({ ...prev, image: '' }));
+                                }}
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                                title="Remove media"
+                            >
+                                ✕
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 pointer-events-none">
+                                <p className="text-xs text-white font-semibold">
+                                    {imageFile ? imageFile.name : 'Current media'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="pt-6 space-y-4">

@@ -1,18 +1,17 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IProduct extends Document {
-  name: string;
-  size?: string[];
-  color?: string[];
-  image: string;
-  desc?: string;
-  category: string;
-  price: number;
-  isDeleted: boolean;
-
-  deletedAt?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+    name: string;
+    size: string[];
+    color: string[];
+    image: string;
+    desc: string;
+    category: string;
+    price: number;
+    isDeleted: boolean;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const productSchema: Schema = new Schema({
@@ -30,7 +29,7 @@ const productSchema: Schema = new Schema({
     }],
     image: {
         type: String,
-        default: "default.png"
+        required: true
     },
     desc: {
         type: String,
@@ -46,15 +45,15 @@ const productSchema: Schema = new Schema({
         default: 0
     },
 
-     isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
+    isDeleted: {
+        type: Boolean,
+        default: false,
+        index: true,
     },
 
     deletedAt: {
-      type: Date,
-      default: null,
+        type: Date,
+        default: null,
     },
 }, {
     timestamps: true

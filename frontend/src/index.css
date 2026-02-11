@@ -6,6 +6,33 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Performance optimizations */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Performance optimizations for better scroll and resize */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.group {
+  contain: layout style;
+}
+
+/* GPU acceleration for transforms */
+.transform {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Match the simple teal theme from screenshots */

@@ -1,58 +1,36 @@
-import dotenv from 'dotenv';
-import express, { Express, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import path from 'path';
-import DatabaseConnection from './app/config/dbcon';
-import productApiRoutes from './app/routes/productApiRoutes';
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import path from "path";
+
+import DatabaseConnection from "./app/config/dbcon";
+import productApiRoutes from "./app/routes/productApiRoutes";
 
 dotenv.config();
+const app = express();
 
-const app: Express = express();
+// 1. Database
+DatabaseConnection();
 
-// SECURITY & MIDDLEWARE
-app.use(helmet());
-
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  }),
-);
-
+// 2. Middleware
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(morgan("dev"));
 
-// DATABASE
-DatabaseConnection().catch(err => {
-  console.error('Failed to connect to database:', err);
-  process.exit(1);
-});
+// 3. Routes
+app.get("/health", (_, res) => res.json({ status: "OK" }));
+app.use("/api/v1", productApiRoutes);
 
-// ROUTES
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', message: 'Backend service is healthy' });
-});
-app.use('/api/v1', productApiRoutes);
+// 4. Production Frontend
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.resolve(__dirname, "../../frontend/dist");
+  app.use(express.static(frontendPath));
+  app.get("*", (_, res) => res.sendFile(path.join(frontendPath, "index.html")));
+}
 
-// GLOBAL ERROR HANDLER
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
-  });
-});
+// 5. 404 & Start
+app.use((_req, res) => res.status(404).json({ success: false, message: "Not Found" }));
 
-// START
 const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log("==========================================");
-  console.log(`STATUS: BACKEND SERVICE RUNNING`);
-  console.log(`PORT  : ${port}`);
-  console.log(`ENV   : ${process.env.NODE_ENV || 'development'}`);
-  console.log("==========================================");
-});
-
+app.listen(port, () => console.log(` Server on port ${port}`));
